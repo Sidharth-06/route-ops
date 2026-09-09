@@ -1,132 +1,82 @@
-# RouteOps Logistics Route Simulator
+# RouteOps
 
-An enterprise-grade frontend application that simulates an autonomous freight vehicle navigating through multi-stop delivery locations (**Origin → D1 → D2 → D3**) with live telemetry, heading rotation, dynamic status cards, and interactive playback controls.
+RouteOps is a focused fleet-operations simulator for a multi-stop delivery run across western and southern India. It combines a live Leaflet route map, animated telemetry, delivery-stop state, and an interactive 3D vehicle scene in a compact operations UI.
 
-An interactive route simulation for fleet operations teams.
+**Live demo:** [routeops-simulation.vercel.app](https://routeops-simulation.vercel.app)
 
----
+## What it includes
 
-## 🌟 Features
+- Mumbai → Pune → Kolhapur → Bengaluru route visualization
+- Traversed and remaining route trails with animated vehicle position
+- Actual Khronos Cesium Milk Truck 3D model rendered with React Three Fiber
+- Live speed, distance, ETA, stop completion, and dwell-state telemetry
+- Route rail with delivery-stop navigation, reset, and 1× / 2× / 4× speed controls
+- Telemetry dock with manifest details and vehicle diagnostics
+- Dark and light themes with persisted preference
+- Keyboard shortcuts for playback, theme, sound, follow mode, and reset
+- Responsive layout for desktop and smaller screens
 
-### 1. Interactive Route Map
-- **Stops Display**:
-  - **Origin**: Mumbai Central Logistics Hub (Green radar pulse dot)
-  - **D1**: Pune Industrial DC (Red pin marker)
-  - **D2**: Kolhapur Gateway Terminal (Amber pin marker)
-  - **D3**: Bengaluru Tech Mega Warehouse (Slate destination pin)
-- **Route Visualization**:
-  - **Traversed Trail**: Solid emerald green path (`#10b981`)
-  - **Remaining Route**: Dashed electric blue path (`#3b82f6`) matching the assignment wireframe
-- **Animated Truck Marker**:
-  - Vehicle marker smoothly interpolating across highway waypoints
-  - Real-time **heading/bearing rotation** ($\Delta \theta$ degree calculation) so the truck naturally steers along turns
-  - Floating live speed tag above the vehicle
-  - Pulsing radar halo under the chassis
+## Tech stack
 
-### 2. Live Truck Status Panel (Wireframe Spec)
-Floating glassmorphic card displaying:
-- **Current Location**: Real-time location description (e.g. `Between Origin → D1`, `At Delivery Point D1`)
-- **Distance Covered**: Dynamic km tracker (e.g. `4.2 km / 985.4 km`)
-- **Next Stop**: Upcoming stop name and remaining distance
-- **Completed Stops**: Live counter (`0/3`, `1/3`, `2/3`, `3/3`)
-- **ETA**: Dynamic arrival duration based on current vehicle speed
-- **Dwell Mode**: Simulates a 3-second cargo unloading stop when arriving at D1 and D2
+- React 19 + TypeScript
+- Vite
+- Leaflet + OpenStreetMap tiles
+- Three.js + React Three Fiber
+- Lucide React
+- Motion
+- Vitest + React Testing Library
+- CSS custom-property design system
 
-### 3. Bonus Capabilities
-- **Pause & Resume**: Spacebar shortcut or play/pause button to pause and resume live tracking
-- **Dynamic ETA Engine**: Computes exact arrival estimates for the next waypoint and overall destination
-- **Dark Mode & Light Mode**: One-click theme toggle with a shared, accessible design system
-- **Simulation Speed Controls**: Fast-forward simulation with `1x`, `2x`, `4x`, `8x`, `16x` multiplier chips
-- **Timeline Scrubber Slider**: Seek and drag to any percentage or distance along the delivery route
-- **Interactive Telemetry Dock**:
-  - Digital speedometer readout
-  - Delivery schedule timeline with cargo manifests and payloads (kg)
-  - Click any stop in the schedule to jump the vehicle directly to that destination
-  - Powertrain diagnostics: Eco-Hybrid battery/fuel level, engine temperature, and 5G GPS telematics signal
-- **Audio Feedback**: Subtle synthesized Web Audio API sound effects for clicks, arrival chimes, and completion fanfare
-- **Trip Celebration**: Confetti animation upon reaching final delivery point D3
+## Quick start
 
----
-
-## 🛠️ Technology Stack
-
-- **Framework**: React 19 + TypeScript
-- **Bundler**: Vite
-- **Map Engine**: Leaflet (custom DivIcons, tile layers, and dynamic polylines)
-- **Icons**: Lucide React
-- **Celebration Effects**: Canvas Confetti
-- **Testing**: Vitest + React Testing Library + jsdom
-- **Styling**: Vanilla CSS Design System with CSS Custom Properties and Glassmorphism (no external CSS bloat)
-
----
-
-## 🚀 Quick Start
-
-### 1. Install Dependencies
 ```bash
 npm install
-```
-
-### 2. Run the Development Server
-```bash
 npm run dev
 ```
-Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-### 3. Run Automated Tests
+Open [http://localhost:5173](http://localhost:5173).
+
+Useful commands:
+
 ```bash
-npm run test
+npm test       # Run the test suite
+npm run build  # Type-check and create a production build
+npm run preview
 ```
 
-### 4. Build for Production
-```bash
-npm run build
-```
+## Controls
 
----
+The route rail provides the visible controls:
 
-## ⌨️ Keyboard Shortcuts
+- **Reset run** — return to the origin and resume automatically
+- **1× / 2× / 4×** — change simulation speed
+- Clicking a stop — jump the vehicle to that stop
+
+Keyboard shortcuts:
 
 | Key | Action |
-| :--- | :--- |
-| `Space` | Toggle Play / Pause simulation |
-| `T` | Toggle Dark / Light theme |
-| `M` | Mute / Unmute audio feedback |
-| `F` | Toggle camera tracking / Free map pan |
-| `R` | Reset simulation to Origin |
+| --- | --- |
+| `Space` | Play or pause the simulation |
+| `R` | Reset to the origin and resume |
+| `T` | Toggle dark/light theme |
+| `M` | Toggle sound feedback |
+| `F` | Toggle follow-vehicle camera mode |
 
----
+## Project structure
 
-## 📁 Project Structure
-
-```
+```text
 src/
-├── types/
-│   └── logistics.ts              # Route, Stop, Telemetry, Simulation types
-├── services/
-│   ├── routeData.ts              # Origin, D1, D2, D3 coordinates, and waypoint generation
-│   └── telemetryService.ts       # Haversine distance, bearing math, ETA, and Web Audio
-├── hooks/
-│   ├── useTruckSimulation.ts     # 60fps interpolation loop, dwell timer, and playback state
-│   └── useTheme.ts               # Theme management (dark/light mode persistence)
 ├── components/
-│   ├── header/
-│   │   └── Header.tsx            # App branding, vehicle badge, and global toggles
-│   ├── map/
-│   │   └── MapContainer.tsx      # Leaflet map, custom SVG DivIcons, and dynamic polylines
-│   ├── telemetry/
-│   │   ├── StatusPanel.tsx       # Pixel-accurate wireframe TRUCK STATUS card
-│   │   ├── SimulationControls.tsx# Play/Pause, speed multipliers, and scrubber
-│   │   └── TelemetryDock.tsx     # Speedometer, schedule stepper, and diagnostics
-├── styles/
-│   ├── variables.css             # Design tokens and theme colors
-│   ├── global.css                # Base layout, typography, and animations
-│   ├── map.css                   # Custom map pin and truck marker styles
-│   └── components.css            # Controls, status card, and dock styling
-├── tests/
-│   ├── telemetryService.test.ts  # Math and telemetry unit tests
-│   ├── StatusPanel.test.tsx      # Wireframe spec validation tests
-│   └── SimulationControls.test.tsx# Controls and bonus feature tests
-├── App.tsx                       # Main application shell
-└── main.tsx                      # Entry point
+│   ├── header/        # Global navigation and telemetry toggles
+│   ├── map/           # Leaflet map and 3D vehicle scene
+│   ├── route/         # Route rail, stop list, and simulation controls
+│   └── telemetry/     # Telemetry dock and status components
+├── hooks/             # Simulation and theme state
+├── services/          # Route data, interpolation, ETA, and audio feedback
+├── styles/            # Global tokens, map styles, and component styles
+└── tests/             # UI and telemetry tests
 ```
+
+## 3D model attribution
+
+The vehicle scene uses the Khronos Group **Cesium Milk Truck** glTF sample model. The asset is included at `public/models/CesiumMilkTruck.glb` under the terms described in [CesiumMilkTruck-LICENSE.md](public/models/CesiumMilkTruck-LICENSE.md).
