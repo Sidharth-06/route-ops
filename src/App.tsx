@@ -3,27 +3,23 @@ import { useTheme } from './hooks/useTheme';
 import { useTruckSimulation } from './hooks/useTruckSimulation';
 import { Header } from './components/header/Header';
 import { MapContainer } from './components/map/MapContainer';
-import { StatusPanel } from './components/telemetry/StatusPanel';
-import { SimulationControls } from './components/telemetry/SimulationControls';
 import { TelemetryDock } from './components/telemetry/TelemetryDock';
+import { RouteRail } from './components/route/RouteRail';
 
 export const App: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
-  const [isDockOpen, setIsDockOpen] = useState<boolean>(true);
+  const [isDockOpen, setIsDockOpen] = useState<boolean>(false);
 
   const {
-    isPlaying,
     playbackSpeed,
     followTruck,
     soundEnabled,
     telemetry,
-    progressPercent,
     traversedPath,
     remainingPath,
     stops,
     togglePlay,
     reset,
-    scrubToPercent,
     setSpeed,
     setFollowTruck,
     setSoundEnabled,
@@ -73,6 +69,14 @@ export const App: React.FC = () => {
 
       {/* Main Map & Telemetry Layout */}
       <main className="main-layout">
+        <RouteRail
+          telemetry={telemetry}
+          stops={stops}
+          onSkipToStop={skipToStop}
+          onReset={reset}
+          playbackSpeed={playbackSpeed}
+          onSetSpeed={setSpeed}
+        />
         <section className="map-section">
           {/* Interactive Leaflet Map with Animated Route */}
           <MapContainer
@@ -84,23 +88,6 @@ export const App: React.FC = () => {
             followTruck={followTruck}
           />
 
-          {/* Floating TRUCK STATUS Wireframe Card (Matching FreightFox spec) */}
-          <StatusPanel
-            telemetry={telemetry}
-            progressPercent={progressPercent}
-          />
-
-          {/* Bottom Simulation Controller */}
-          <SimulationControls
-            isPlaying={isPlaying}
-            onTogglePlay={togglePlay}
-            onReset={reset}
-            playbackSpeed={playbackSpeed}
-            onSetSpeed={setSpeed}
-            progressPercent={progressPercent}
-            onScrub={scrubToPercent}
-            telemetry={telemetry}
-          />
         </section>
 
         {/* Right-Side Telemetry & Manifest Dock */}

@@ -25,7 +25,7 @@ const mockTelemetry: TruckTelemetry = {
   status: 'in_transit',
 };
 
-describe('StatusPanel Component (FreightFox Wireframe Spec)', () => {
+describe('StatusPanel Component (RouteOps UI Spec)', () => {
   it('renders the TRUCK STATUS title and card', () => {
     render(<StatusPanel telemetry={mockTelemetry} progressPercent={0.4} />);
     expect(screen.getByTestId('truck-status-panel')).toBeInTheDocument();

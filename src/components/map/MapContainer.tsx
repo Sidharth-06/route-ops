@@ -1,7 +1,11 @@
-import React, { useEffect, useRef } from 'react';
+import React, { lazy, Suspense, useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Coordinate, DeliveryStop, ThemeMode, TruckTelemetry } from '../../types/logistics';
+
+const VehicleScene = lazy(() =>
+  import('./VehicleScene').then((module) => ({ default: module.VehicleScene }))
+);
 
 interface MapContainerProps {
   theme: ThemeMode;
@@ -25,8 +29,11 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const traversedPolylineRef = useRef<L.Polyline | null>(null);
   const remainingPolylineRef = useRef<L.Polyline | null>(null);
-  const truckMarkerRef = useRef<L.Marker | null>(null);
   const stopMarkersRef = useRef<L.Marker[]>([]);
+  const vehicleOverlayRef = useRef<HTMLDivElement | null>(null);
+  const lastFollowPanAtRef = useRef(0);
+  const vehicleCoordinateRef = useRef<Coordinate>(telemetry.currentCoordinate);
+  vehicleCoordinateRef.current = telemetry.currentCoordinate;
 
   // Initialize Leaflet Map
   useEffect(() => {
@@ -42,15 +49,18 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 
     mapInstanceRef.current = map;
 
-    // Initial Tile Layer
-    const tileUrl =
-      theme === 'dark'
-        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png'
-        : 'https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png';
+    // Custom pane for the 3D truck — Leaflet automatically animates all panes
+    // during zoom and pan, so the truck stays locked to its lat/lng.
+    const vehiclePane = map.createPane('vehiclePane');
+    vehiclePane.style.zIndex = '650';
+    vehiclePane.style.pointerEvents = 'none';
+
+    // OpenStreetMap's standard tiles are keyless and keep the map usable in local demos.
+    const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
     const tileLayer = L.tileLayer(tileUrl, {
       maxZoom: 19,
-      subdomains: 'abcd',
+      subdomains: 'abc',
     }).addTo(map);
 
     tileLayerRef.current = tileLayer;
@@ -91,7 +101,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       } else {
         iconHtml = `
           <div class="stop-pin-wrapper">
-            <div class="stop-pin-radar" style="border: 2px solid ${stop.color};"></div>
+            <div class="stop-pin-radar" style="color: ${stop.color};"></div>
             <div class="stop-pin-body" style="background-color: ${stop.color};">
               <span class="stop-pin-label">${stop.code}</span>
             </div>
@@ -103,57 +113,31 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       const customIcon = L.divIcon({
         className: 'custom-stop-marker-icon',
         html: iconHtml,
-        iconSize: [40, 48],
-        iconAnchor: [20, 24],
+        iconSize: [36, 52],
+        iconAnchor: [18, 28],
       });
 
       const marker = L.marker([stop.coordinate.lat, stop.coordinate.lng], {
         icon: customIcon,
       }).addTo(map);
 
-      // Popup with manifest info
+      // Popup
       marker.bindPopup(`
-        <div style="font-family: var(--font-main); padding: 4px;">
-          <strong style="font-size: 13px; color: ${stop.color}">${stop.code}: ${stop.name}</strong>
-          <div style="font-size: 11px; margin-top: 4px; color: #64748b;">${stop.address}</div>
-          <div style="font-size: 11px; margin-top: 6px;"><strong>Payload:</strong> ${stop.cargoDescription}</div>
-          <div style="font-size: 11px;"><strong>Weight:</strong> ${stop.weightKg} kg (${stop.packageCount} pkgs)</div>
+        <div style="font-family: 'Inter', sans-serif; padding: 8px; background: #131318; color: #e4e4ef; border-radius: 4px; min-width: 200px; font-size: 11px;">
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px; border-bottom: 1px solid #1f1f2a; padding-bottom:6px;">
+            <span style="font-family: monospace; font-weight:700; font-size:10px; background:${stop.color}; color:#fff; padding:1px 5px; border-radius:2px;">${stop.code}</span>
+            <strong style="font-size:12px;">${stop.name}</strong>
+          </div>
+          <div style="color:#8b8ba7; margin-bottom:4px;">${stop.address}</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px;">
+            <div><span style="color:#55556e; font-size:9px; text-transform:uppercase; letter-spacing:0.06em;">Payload</span><br/><span style="font-family:monospace; font-weight:600;">${stop.cargoDescription}</span></div>
+            <div><span style="color:#55556e; font-size:9px; text-transform:uppercase; letter-spacing:0.06em;">Weight</span><br/><span style="font-family:monospace; font-weight:600;">${stop.weightKg} kg</span></div>
+          </div>
         </div>
       `);
 
       return marker;
     });
-
-    // Truck Marker (with Freight Truck SVG & heading rotation)
-    const truckIconHtml = `
-      <div class="truck-marker-wrapper" id="truck-visual-marker">
-        <div class="truck-radar-pulse"></div>
-        <div class="truck-speed-tag" id="truck-speed-bubble">-- km/h</div>
-        <div class="truck-icon-container" id="truck-rotator">
-          <svg class="truck-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" fill="#38bdf8"/>
-            <path d="M15 18H9"/>
-            <path d="M19 18h2a1 1 0 0 0 1-1v-5l-3-4h-5v10Z" fill="#0284c7"/>
-            <circle cx="7" cy="18" r="2" fill="#f8fafc"/>
-            <circle cx="17" cy="18" r="2" fill="#f8fafc"/>
-          </svg>
-        </div>
-      </div>
-    `;
-
-    const truckIcon = L.divIcon({
-      className: 'custom-truck-marker-icon',
-      html: truckIconHtml,
-      iconSize: [44, 44],
-      iconAnchor: [22, 22],
-    });
-
-    const initialCoord = stops[0].coordinate;
-    const truckMarker = L.marker([initialCoord.lat, initialCoord.lng], {
-      icon: truckIcon,
-      zIndexOffset: 1000,
-    }).addTo(map);
-    truckMarkerRef.current = truckMarker;
 
     // Fit map bounds to show full route initially
     const bounds = L.latLngBounds(stops.map((s) => [s.coordinate.lat, s.coordinate.lng]));
@@ -165,16 +149,49 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     };
   }, []); // Run once on mount
 
-  // Update Tile Layer when theme changes (bonus requirement: Dark mode)
+  // Attach overlay to Leaflet's vehiclePane and track position with layerPoint.
+  // Leaflet animates the pane during zoom/pan so the truck is always geo-locked.
   useEffect(() => {
-    if (!mapInstanceRef.current || !tileLayerRef.current) return;
-    const tileUrl =
-      theme === 'dark'
-        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png'
-        : 'https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png';
+    const map = mapInstanceRef.current;
+    const overlay = vehicleOverlayRef.current;
+    if (!map || !overlay) return;
 
-    tileLayerRef.current.setUrl(tileUrl);
-  }, [theme]);
+    // Move the overlay div into Leaflet's managed pane.
+    const pane = map.getPane('vehiclePane');
+    if (pane && overlay.parentElement !== pane) {
+      pane.appendChild(overlay);
+    }
+
+    // layerPoint is relative to the pane origin — correct coordinate space.
+    const setPos = () => {
+      const { lat, lng } = vehicleCoordinateRef.current;
+      const pt = map.latLngToLayerPoint([lat, lng]);
+      overlay.style.transform = `translate3d(${pt.x}px, ${pt.y}px, 0) translate(-50%, -85%)`;
+    };
+
+    let rafId: number;
+    let zooming = false;
+
+    // During zoom Leaflet animates the pane itself — we must NOT update
+    // layerPoint ourselves or it will fight Leaflet and glitch.
+    const onZoomStart = () => { zooming = true; };
+    const onZoomEnd   = () => { zooming = false; setPos(); };
+
+    const tick = () => {
+      if (!zooming) setPos();
+      rafId = requestAnimationFrame(tick);
+    };
+
+    map.on('zoomstart', onZoomStart);
+    map.on('zoomend',   onZoomEnd);
+    rafId = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      map.off('zoomstart', onZoomStart);
+      map.off('zoomend',   onZoomEnd);
+    };
+  }, []); // runs once — RAF + refs give live position
 
   // Update Traversed and Remaining Polylines
   useEffect(() => {
@@ -189,38 +206,58 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     }
   }, [traversedPath, remainingPath]);
 
-  // Update Truck Position, Heading Rotation, and Speed Bubble
+  // Follow-truck camera pan (position sync is handled by the RAF above).
   useEffect(() => {
-    if (!truckMarkerRef.current || !telemetry.currentCoordinate) return;
+    if (!followTruck || !telemetry.currentCoordinate) return;
+    const map = mapInstanceRef.current;
+    if (!map) return;
 
     const { lat, lng } = telemetry.currentCoordinate;
-    truckMarkerRef.current.setLatLng([lat, lng]);
+    const now = performance.now();
+    const distanceFromView = map.distance(map.getCenter(), [lat, lng]);
 
-    // Update rotation transform for heading
-    const rotatorEl = document.getElementById('truck-rotator');
-    if (rotatorEl) {
-      // SVG base truck points right (90 deg), so we adjust offset: heading - 90
-      rotatorEl.style.transform = `rotate(${telemetry.heading - 90}deg)`;
-    }
-
-    // Update speed bubble
-    const speedBubbleEl = document.getElementById('truck-speed-bubble');
-    if (speedBubbleEl) {
-      speedBubbleEl.textContent = `${Math.round(telemetry.speedKmh)} km/h`;
-    }
-
-    // Auto-center map if followTruck is enabled
-    if (followTruck && mapInstanceRef.current) {
-      mapInstanceRef.current.panTo([lat, lng], {
-        animate: true,
-        duration: 0.15,
-      });
+    if (distanceFromView > 15000 && now - lastFollowPanAtRef.current > 600) {
+      lastFollowPanAtRef.current = now;
+      map.stop();
+      map.panTo([lat, lng], { animate: true, duration: 0.6 });
     }
   }, [telemetry, followTruck]);
 
   return (
     <div className="map-viewport" data-testid="map-viewport">
       <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
+
+      {/* Overlay div — moved into Leaflet's vehiclePane by useEffect above.
+           We still render it in JSX so React manages its lifetime. */}
+      <div
+        ref={vehicleOverlayRef}
+        id="map-vehicle-3d"
+        className="map-vehicle-3d"
+        aria-label="Live vehicle position"
+        style={{ width: 140, height: 110 }}
+      >
+        <Suspense fallback={null}>
+          <VehicleScene
+            isMoving={telemetry.status === 'in_transit'}
+            heading={telemetry.heading}
+          />
+        </Suspense>
+      </div>
+
+      {/* Route info bar — top left */}
+      <div className="map-brief">
+        <div className="map-brief-inner">
+          <span className="map-brief-label">LIVE ROUTE</span>
+          <span className="map-brief-title">West Coast Corridor</span>
+          <div className="map-brief-meta">
+            <span>Mumbai → Bengaluru</span>
+            <span style={{ color: 'var(--border-strong)' }}>·</span>
+            <span>{telemetry.totalRouteDistanceKm} km</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="map-scale-note">INDIA / SW SECTOR</div>
     </div>
   );
 };

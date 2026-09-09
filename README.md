@@ -1,8 +1,8 @@
-# FreightFox Logistics Truck Route Visualizer
+# RouteOps Logistics Route Simulator
 
 An enterprise-grade frontend application that simulates an autonomous freight vehicle navigating through multi-stop delivery locations (**Origin → D1 → D2 → D3**) with live telemetry, heading rotation, dynamic status cards, and interactive playback controls.
 
-Built for the **FreightFox Assignment Round**.
+An interactive route simulation for fleet operations teams.
 
 ---
 
@@ -35,7 +35,7 @@ Floating glassmorphic card displaying:
 ### 3. Bonus Capabilities
 - **Pause & Resume**: Spacebar shortcut or play/pause button to pause and resume live tracking
 - **Dynamic ETA Engine**: Computes exact arrival estimates for the next waypoint and overall destination
-- **Dark Mode & Light Mode**: One-click theme toggle switching map tiles between **CartoDB Dark Matter** and **CartoDB Positron**
+- **Dark Mode & Light Mode**: One-click theme toggle with a shared, accessible design system
 - **Simulation Speed Controls**: Fast-forward simulation with `1x`, `2x`, `4x`, `8x`, `16x` multiplier chips
 - **Timeline Scrubber Slider**: Seek and drag to any percentage or distance along the delivery route
 - **Interactive Telemetry Dock**:

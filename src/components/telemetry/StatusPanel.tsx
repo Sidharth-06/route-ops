@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import { Package, Clock, Navigation } from 'lucide-react';
 import { TruckTelemetry } from '../../types/logistics';
 import { formatDuration } from '../../services/telemetryService';
@@ -16,7 +17,13 @@ export const StatusPanel: React.FC<StatusPanelProps> = ({
   const isDwell = telemetry.status === 'at_stop';
 
   return (
-    <div className="truck-status-wireframe-card" data-testid="truck-status-panel">
+    <motion.section
+      className="truck-status-wireframe-card"
+      data-testid="truck-status-panel"
+      initial={{ opacity: 0, y: 18, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.55, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
+    >
       {/* Header with Live Indicator */}
       <div className="status-card-header">
         <span className="status-card-title">
@@ -102,6 +109,7 @@ export const StatusPanel: React.FC<StatusPanelProps> = ({
       {/* ETA info pill */}
       {telemetry.nextStop && (
         <div
+          className="status-eta-pill"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -128,6 +136,6 @@ export const StatusPanel: React.FC<StatusPanelProps> = ({
           style={{ width: `${progressPercent}%` }}
         />
       </div>
-    </div>
+    </motion.section>
   );
 };

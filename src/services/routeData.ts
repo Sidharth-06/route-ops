@@ -12,7 +12,7 @@ export const STOPS: DeliveryStop[] = [
     cargoDescription: 'Heavy Machinery & Automotive Components',
     packageCount: 142,
     weightKg: 8450,
-    recipient: 'FreightFox Fleet Operations',
+    recipient: 'RouteOps Fleet Operations',
     plannedArrivalTime: '08:00 AM (Departed)',
     color: '#10b981', // Emerald green
   },

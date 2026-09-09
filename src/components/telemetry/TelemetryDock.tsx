@@ -1,14 +1,14 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Activity,
   CheckCircle2,
-  Clock,
   BatteryCharging,
   Thermometer,
   Wifi,
   Weight,
   X,
-  ChevronRight,
+  Package,
 } from 'lucide-react';
 import { DeliveryStop, TruckTelemetry } from '../../types/logistics';
 import { formatDuration, formatClockETA } from '../../services/telemetryService';
@@ -28,188 +28,195 @@ export const TelemetryDock: React.FC<TelemetryDockProps> = ({
   stops,
   onSkipToStop,
 }) => {
-  if (!isOpen) return null;
-
   return (
-    <aside className="telemetry-dock" data-testid="telemetry-dock">
-      <div className="dock-header">
-        <div className="dock-title">
-          <Activity size={18} style={{ color: 'var(--accent-blue)' }} />
-          <span>Vehicle Telemetry & Manifest</span>
-        </div>
-        <button
-          className="btn btn-ghost btn-icon-only"
-          onClick={onClose}
-          title="Close Dock"
+    <AnimatePresence>
+      {isOpen && (
+        <motion.aside
+          className="telemetry-dock"
+          data-testid="telemetry-dock"
+          initial={{ opacity: 0, x: 48, width: 0 }}
+          animate={{ opacity: 1, x: 0, width: 300 }}
+          exit={{ opacity: 0, x: 48, width: 0 }}
+          transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+          style={{ overflow: 'hidden', flexShrink: 0 }}
         >
-          <X size={18} />
-        </button>
-      </div>
-
-      <div className="dock-body">
-        {/* Speedometer & ETA Card */}
-        <div className="gauge-card">
-          <div className="speed-digital-display">
-            <span className="speed-number">{Math.round(telemetry.speedKmh)}</span>
-            <span className="speed-unit">Current Speed (km/h)</span>
-          </div>
-
-          <div className="gauge-divider" />
-
-          <div className="eta-display">
-            <span className="eta-time">
-              {formatDuration(telemetry.estimatedTimeToDestinationSecs)}
-            </span>
-            <span className="eta-label">
-              Total ETA ({formatClockETA(telemetry.estimatedTimeToDestinationSecs)})
-            </span>
-          </div>
-        </div>
-
-        {/* Delivery Stops Checklist */}
-        <div className="stops-stepper-card">
-          <div className="card-title">
-            <span>Delivery Schedule (3 Stops)</span>
-            <span
-              style={{
-                fontSize: 11,
-                color: 'var(--accent-emerald)',
-                fontWeight: 700,
-              }}
+          {/* Header */}
+          <div className="dock-header">
+            <div className="dock-title">
+              <Activity size={12} />
+              TELEMETRY
+            </div>
+            <button
+              className="btn btn-ghost btn-icon-only"
+              onClick={onClose}
+              title="Close"
             >
-              {telemetry.completedStopsCount} of {telemetry.totalStopsCount} Complete
-            </span>
+              <X size={14} />
+            </button>
           </div>
 
-          <div className="stepper-list">
-            {stops.map((stop, idx) => {
-              // Determine status
-              let isPassed = false;
-              let isCurrent = false;
-
-              if (idx === 0) {
-                // Origin
-                isPassed = telemetry.totalDistanceCoveredKm > 0.5;
-                isCurrent = telemetry.totalDistanceCoveredKm <= 0.5;
-              } else if (idx === 1) {
-                // D1
-                isPassed = telemetry.completedStopsCount >= 1;
-                isCurrent =
-                  telemetry.completedStopsCount === 0 &&
-                  telemetry.totalDistanceCoveredKm > 0.5;
-              } else if (idx === 2) {
-                // D2
-                isPassed = telemetry.completedStopsCount >= 2;
-                isCurrent = telemetry.completedStopsCount === 1;
-              } else if (idx === 3) {
-                // D3
-                isPassed = telemetry.completedStopsCount >= 3;
-                isCurrent = telemetry.completedStopsCount === 2;
-              }
-
-              return (
-                <div
-                  key={stop.id}
-                  className="stepper-item"
-                  onClick={() => onSkipToStop(stop.code)}
-                  title={`Click to jump simulation to ${stop.name}`}
-                >
-                  {/* Stepper connecting line */}
-                  {idx < stops.length - 1 && (
-                    <div
-                      className={`stepper-line ${isPassed ? 'passed' : ''}`}
-                    />
-                  )}
-
-                  <div className="stepper-icon-col">
-                    <div
-                      className={`stepper-node ${
-                        isPassed ? 'passed' : isCurrent ? 'current' : ''
-                      }`}
-                    >
-                      {isPassed ? (
-                        <CheckCircle2 size={16} />
-                      ) : (
-                        stop.code.slice(-2) || stop.code[0]
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="stepper-content">
-                    <div className="stepper-stop-name">
-                      <span>{stop.name}</span>
-                      <span
-                        className="stepper-stop-badge"
-                        style={{
-                          backgroundColor: isPassed
-                            ? 'rgba(16, 185, 129, 0.15)'
-                            : isCurrent
-                            ? 'rgba(59, 130, 246, 0.15)'
-                            : 'rgba(255, 255, 255, 0.06)',
-                          color: isPassed
-                            ? 'var(--accent-emerald)'
-                            : isCurrent
-                            ? 'var(--accent-blue)'
-                            : 'var(--text-muted)',
-                        }}
-                      >
-                        {isPassed ? 'Delivered' : isCurrent ? 'En Route' : 'Scheduled'}
-                      </span>
-                    </div>
-
-                    <div className="stepper-stop-details">
-                      {stop.city} · {stop.address}
-                    </div>
-
-                    <div className="stepper-cargo-tag">
-                      <strong>Cargo:</strong> {stop.cargoDescription} ({stop.weightKg} kg)
-                    </div>
+          <div className="dock-body">
+            {/* Speed & ETA */}
+            <div className="dock-section">
+              <div className="dock-section-header">
+                <span>VEHICLE STATUS</span>
+              </div>
+              <div className="dock-stats-row">
+                <div className="dock-stat-cell">
+                  <span className="dock-stat-label">Speed</span>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                    <span className="dock-stat-value">{Math.round(telemetry.speedKmh)}</span>
+                    <span className="dock-stat-unit">km/h</span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
+                <div className="dock-stat-divider" />
+                <div className="dock-stat-cell">
+                  <span className="dock-stat-label">Trip ETA</span>
+                  <span className="dock-eta-value">
+                    {formatDuration(telemetry.estimatedTimeToDestinationSecs)}
+                  </span>
+                  <span className="dock-stat-unit" style={{ marginTop: 4 }}>
+                    by {formatClockETA(telemetry.estimatedTimeToDestinationSecs)}
+                  </span>
+                </div>
+              </div>
+            </div>
 
-        {/* Hardware & Diagnostics */}
-        <div className="diagnostics-grid">
-          <div className="diagnostic-item">
-            <span className="diag-label">
-              <BatteryCharging size={13} style={{ color: 'var(--accent-emerald)' }} />
-              Battery / Fuel
-            </span>
-            <span className="diag-val" style={{ color: 'var(--accent-emerald)' }}>
-              {telemetry.fuelLevelPercent}% (Eco-Hybrid)
-            </span>
-          </div>
+            {/* Delivery Stops */}
+            <div className="dock-section">
+              <div className="dock-section-header">
+                <span>DELIVERY SCHEDULE</span>
+                <span style={{ color: 'var(--accent-green)', fontFamily: 'var(--font-mono)' }}>
+                  {telemetry.completedStopsCount}/{telemetry.totalStopsCount}
+                </span>
+              </div>
+              <div className="dock-stop-list">
+                {stops.map((stop, idx) => {
+                  let isPassed = false;
+                  let isCurrent = false;
 
-          <div className="diagnostic-item">
-            <span className="diag-label">
-              <Thermometer size={13} style={{ color: 'var(--accent-amber)' }} />
-              Powertrain Temp
-            </span>
-            <span className="diag-val">{telemetry.engineTempC} °C</span>
-          </div>
+                  if (idx === 0) {
+                    isPassed = telemetry.totalDistanceCoveredKm > 0.5;
+                    isCurrent = telemetry.totalDistanceCoveredKm <= 0.5;
+                  } else if (idx === 1) {
+                    isPassed = telemetry.completedStopsCount >= 1;
+                    isCurrent =
+                      telemetry.completedStopsCount === 0 &&
+                      telemetry.totalDistanceCoveredKm > 0.5;
+                  } else if (idx === 2) {
+                    isPassed = telemetry.completedStopsCount >= 2;
+                    isCurrent = telemetry.completedStopsCount === 1;
+                  } else if (idx === 3) {
+                    isPassed = telemetry.completedStopsCount >= 3;
+                    isCurrent = telemetry.completedStopsCount === 2;
+                  }
 
-          <div className="diagnostic-item">
-            <span className="diag-label">
-              <Wifi size={13} style={{ color: 'var(--accent-blue)' }} />
-              GPS / Telematics
-            </span>
-            <span className="diag-val" style={{ color: 'var(--accent-blue)' }}>
-              5G Satellite (Active)
-            </span>
-          </div>
+                  const statusLabel = isPassed
+                    ? 'Delivered'
+                    : isCurrent
+                    ? 'En Route'
+                    : 'Scheduled';
+                  const statusClass = isPassed
+                    ? 'status-delivered'
+                    : isCurrent
+                    ? 'status-en-route'
+                    : 'status-scheduled';
 
-          <div className="diagnostic-item">
-            <span className="diag-label">
-              <Weight size={13} style={{ color: 'var(--text-muted)' }} />
-              Total Payload
-            </span>
-            <span className="diag-val">16,900 kg</span>
+                  return (
+                    <div
+                      key={stop.id}
+                      className="dock-stop-item"
+                      onClick={() => onSkipToStop(stop.code)}
+                      title={`Jump to ${stop.name}`}
+                    >
+                      <div className="dock-stop-left">
+                        <div
+                          className={`dock-stop-node ${
+                            isPassed ? 'passed' : isCurrent ? 'current' : ''
+                          }`}
+                        >
+                          {isPassed ? (
+                            <CheckCircle2 size={11} />
+                          ) : (
+                            stop.code.replace('Origin', 'O')
+                          )}
+                        </div>
+                        {idx < stops.length - 1 && (
+                          <div className={`dock-stop-line ${isPassed ? 'passed' : ''}`} />
+                        )}
+                      </div>
+
+                      <div className="dock-stop-body">
+                        <div className="dock-stop-name">
+                          <span>{stop.name}</span>
+                          <span className={`dock-stop-status ${statusClass}`}>
+                            {statusLabel}
+                          </span>
+                        </div>
+                        <div className="dock-stop-detail">{stop.city} · {stop.address}</div>
+                        <div className="dock-stop-cargo">
+                          <Package size={9} />
+                          {stop.cargoDescription} · {stop.weightKg} kg
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Diagnostics */}
+            <div className="dock-section">
+              <div className="dock-section-header">
+                <span>DIAGNOSTICS</span>
+              </div>
+              <div className="dock-diag-grid">
+                <div className="dock-diag-cell">
+                  <span className="dock-diag-label">
+                    <BatteryCharging size={10} style={{ display: 'inline', marginRight: 4 }} />
+                    Fuel / Battery
+                  </span>
+                  <span
+                    className="dock-diag-value"
+                    style={{ color: 'var(--accent-green)' }}
+                  >
+                    {telemetry.fuelLevelPercent}%
+                  </span>
+                </div>
+
+                <div className="dock-diag-cell">
+                  <span className="dock-diag-label">
+                    <Thermometer size={10} style={{ display: 'inline', marginRight: 4 }} />
+                    Powertrain
+                  </span>
+                  <span className="dock-diag-value">{telemetry.engineTempC} °C</span>
+                </div>
+
+                <div className="dock-diag-cell">
+                  <span className="dock-diag-label">
+                    <Wifi size={10} style={{ display: 'inline', marginRight: 4 }} />
+                    Telematics
+                  </span>
+                  <span
+                    className="dock-diag-value"
+                    style={{ color: 'var(--accent-cyan)', fontSize: 10 }}
+                  >
+                    5G · Active
+                  </span>
+                </div>
+
+                <div className="dock-diag-cell">
+                  <span className="dock-diag-label">
+                    <Weight size={10} style={{ display: 'inline', marginRight: 4 }} />
+                    Payload
+                  </span>
+                  <span className="dock-diag-value">16,900 kg</span>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    </aside>
+        </motion.aside>
+      )}
+    </AnimatePresence>
   );
 };

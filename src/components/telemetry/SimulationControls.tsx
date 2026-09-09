@@ -1,5 +1,6 @@
-import React from 'react';
-import { Play, Pause, RotateCcw, FastForward, Gauge } from 'lucide-react';
+import React, { useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { Play, Pause, RotateCcw, Gauge, Zap } from 'lucide-react';
 import { TruckTelemetry } from '../../types/logistics';
 import { formatDuration } from '../../services/telemetryService';
 
@@ -14,7 +15,7 @@ interface SimulationControlsProps {
   telemetry: TruckTelemetry;
 }
 
-const SPEED_OPTIONS = [1, 2, 4, 8, 16];
+const SPEED_OPTIONS = [1, 2, 4];
 
 export const SimulationControls: React.FC<SimulationControlsProps> = ({
   isPlaying,
@@ -26,84 +27,88 @@ export const SimulationControls: React.FC<SimulationControlsProps> = ({
   onScrub,
   telemetry,
 }) => {
+  const [speedVisible, setSpeedVisible] = useState(true);
+
   return (
-    <div className="playback-controller-bar" data-testid="playback-controller">
+    <section className="playback-controller-bar" data-testid="playback-controller">
       <div className="controller-top-row">
-        {/* Play / Pause / Reset group */}
+        {/* Controls */}
         <div className="playback-controls-group">
           <button
             className="btn-play-pause"
             onClick={onTogglePlay}
-            title={isPlaying ? 'Pause Simulation (Space)' : 'Resume Simulation (Space)'}
+            title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
             aria-label={isPlaying ? 'Pause' : 'Play'}
           >
-            {isPlaying ? (
-              <Pause size={20} fill="#ffffff" />
-            ) : (
-              <Play size={20} fill="#ffffff" style={{ marginLeft: 2 }} />
-            )}
+            {isPlaying ? <Pause size={16} /> : <Play size={16} style={{ marginLeft: 1 }} />}
           </button>
 
           <button
             className="btn btn-ghost btn-icon-only"
             onClick={onReset}
-            title="Reset Simulation to Origin"
+            title="Reset to origin"
             aria-label="Reset"
           >
-            <RotateCcw size={17} />
+            <RotateCcw size={13} />
           </button>
 
-          {/* Speed Multipliers */}
-          <div className="speed-selector-group">
-            {SPEED_OPTIONS.map((speed) => (
-              <button
-                key={speed}
-                className={`speed-chip ${playbackSpeed === speed ? 'active' : ''}`}
-                onClick={() => onSetSpeed(speed)}
-                title={`Run simulation at ${speed}x speed`}
+          {/* Speed toggle */}
+          <button
+            className={`btn btn-ghost speed-toggle-btn ${speedVisible ? 'active' : ''}`}
+            onClick={() => setSpeedVisible((v) => !v)}
+            title={speedVisible ? 'Hide speed' : 'Show speed'}
+            aria-label="Toggle speed"
+          >
+            <Zap size={12} />
+            <span className="speed-toggle-label">{playbackSpeed}×</span>
+          </button>
+
+          {/* Collapsible speed chips */}
+          <AnimatePresence initial={false}>
+            {speedVisible && (
+              <motion.div
+                className="speed-selector-group"
+                initial={{ opacity: 0, scaleX: 0.8, originX: 0 }}
+                animate={{ opacity: 1, scaleX: 1 }}
+                exit={{ opacity: 0, scaleX: 0.8 }}
+                transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
               >
-                {speed}x
-              </button>
-            ))}
-          </div>
+                {SPEED_OPTIONS.map((speed) => (
+                  <button
+                    key={speed}
+                    className={`speed-chip ${playbackSpeed === speed ? 'active' : ''}`}
+                    onClick={() => onSetSpeed(speed)}
+                    title={`${speed}× speed`}
+                    aria-label={`${speed}x`}
+                  >
+                    {speed}×
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Live Metrics Highlights */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Gauge size={15} style={{ color: 'var(--accent-blue)' }} />
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontWeight: 700,
-                fontSize: 13,
-              }}
-            >
-              {telemetry.speedKmh} km/h
-            </span>
+        {/* Live metrics */}
+        <div className="controller-metrics">
+          <div className="controller-metric">
+            <Gauge size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+            <span className="controller-metric-value">{telemetry.speedKmh}</span>
+            <span className="controller-metric-label">km/h</span>
           </div>
 
-          <div
-            style={{
-              fontSize: 12,
-              color: 'var(--text-secondary)',
-              fontFamily: 'var(--font-mono)',
-            }}
-          >
-            <span>Trip ETA: </span>
-            <strong style={{ color: 'var(--accent-emerald)' }}>
+          <div className="controller-metric">
+            <span className="controller-metric-label">ETA</span>
+            <span className="controller-metric-value" style={{ color: 'var(--accent-green)' }}>
               {formatDuration(telemetry.estimatedTimeToDestinationSecs)}
-            </strong>
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Timeline Scrubber */}
+      {/* Scrubber */}
       <div className="scrubber-section">
-        <span className="scrubber-time-badge">
-          {telemetry.totalDistanceCoveredKm} km
-        </span>
-
+        <span className="scrubber-time-badge">{telemetry.totalDistanceCoveredKm} km</span>
         <input
           type="range"
           min={0}
@@ -112,14 +117,11 @@ export const SimulationControls: React.FC<SimulationControlsProps> = ({
           value={progressPercent}
           onChange={(e) => onScrub(parseFloat(e.target.value))}
           className="scrubber-slider"
-          title="Drag to scrub along route"
+          title="Scrub route"
           aria-label="Route progress"
         />
-
-        <span className="scrubber-time-badge">
-          {telemetry.totalRouteDistanceKm} km
-        </span>
+        <span className="scrubber-time-badge">{telemetry.totalRouteDistanceKm} km</span>
       </div>
-    </div>
+    </section>
   );
 };

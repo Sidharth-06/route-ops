@@ -42,7 +42,7 @@ describe('Telemetry Service & Math Calculations', () => {
     expect(midPos.heading).toBeGreaterThanOrEqual(0);
   });
 
-  it('computes telemetry matching the FreightFox assignment specification', () => {
+  it('computes telemetry matching the RouteOps simulation specification', () => {
     // Initial position between Origin and D1
     const telemetry = computeTruckTelemetry(2, 1, false, false, 0);
     expect(telemetry.currentLocationDescription).toBe('Between Origin → D1');

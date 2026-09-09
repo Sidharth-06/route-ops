@@ -34,6 +34,10 @@ export function useTruckSimulation() {
   const animationFrameRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number | null>(null);
   const dwellTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Refs so the RAF callback always reads latest values without being in deps
+  const floatIndexRef = useRef<number>(0);
+  const playbackSpeedRef = useRef<number>(1);
+  const isAtStopDwellRef = useRef<boolean>(false);
 
   // Clean up timers on unmount
   useEffect(() => {
@@ -95,25 +99,42 @@ export function useTruckSimulation() {
     [soundEnabled]
   );
 
+  // Keep refs in sync with state
+  useEffect(() => { floatIndexRef.current = floatIndex; }, [floatIndex]);
+  useEffect(() => { playbackSpeedRef.current = playbackSpeed; }, [playbackSpeed]);
+  useEffect(() => { isAtStopDwellRef.current = isAtStopDwell; }, [isAtStopDwell]);
+
   // Main high-precision animation loop
+  // floatIndex is intentionally NOT in deps – we use refs to avoid restarting RAF every frame
   useEffect(() => {
-    if (!isPlaying || isAtStopDwell || floatIndex >= MAX_INDEX) {
+    if (!isPlaying || isAtStopDwell) {
       lastTimeRef.current = null;
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
       return;
     }
 
     const animate = (time: number) => {
+      // Read latest values from refs so we never have stale closures
+      if (isAtStopDwellRef.current) {
+        lastTimeRef.current = null;
+        return;
+      }
+
       if (lastTimeRef.current !== null) {
-        const deltaSecs = (time - lastTimeRef.current) / 1000;
-        // Points to advance in this frame
-        const deltaPoints = BASE_POINTS_PER_SECOND * playbackSpeed * deltaSecs;
+        const deltaSecs = Math.min((time - lastTimeRef.current) / 1000, 0.1); // cap to avoid big jumps
+        const deltaPoints = BASE_POINTS_PER_SECOND * playbackSpeedRef.current * deltaSecs;
 
         setFloatIndex((prev) => {
           const next = prev + deltaPoints;
           if (next >= MAX_INDEX) {
+            floatIndexRef.current = MAX_INDEX;
             checkStopArrival(MAX_INDEX);
             return MAX_INDEX;
           }
+          floatIndexRef.current = next;
           checkStopArrival(next);
           return next;
         });
@@ -122,12 +143,17 @@ export function useTruckSimulation() {
       animationFrameRef.current = requestAnimationFrame(animate);
     };
 
+    lastTimeRef.current = null; // reset so first frame has no delta
     animationFrameRef.current = requestAnimationFrame(animate);
 
     return () => {
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
     };
-  }, [isPlaying, isAtStopDwell, playbackSpeed, floatIndex, checkStopArrival]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, isAtStopDwell, checkStopArrival]);
 
   // Telemetry computation
   const telemetry: TruckTelemetry = useMemo(() => {
@@ -186,7 +212,8 @@ export function useTruckSimulation() {
   }, [isPlaying, play, pause]);
 
   const reset = useCallback(() => {
-    setIsPlaying(false);
+    // Reset is an intentional restart: return to origin and resume immediately.
+    setIsPlaying(true);
     setIsAtStopDwell(false);
     if (dwellTimerRef.current) clearInterval(dwellTimerRef.current);
     alertedStopsRef.current.clear();

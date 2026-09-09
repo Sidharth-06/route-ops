@@ -3,7 +3,7 @@ import { ThemeMode } from '../types/logistics';
 
 export function useTheme() {
   const [theme, setTheme] = useState<ThemeMode>(() => {
-    const saved = localStorage.getItem('freightfox_theme') as ThemeMode;
+    const saved = localStorage.getItem('routeops_theme') as ThemeMode;
     if (saved === 'dark' || saved === 'light') return saved;
     // Default to dark mode for enterprise telemetry cockpit feel
     return 'dark';
@@ -11,7 +11,7 @@ export function useTheme() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('freightfox_theme', theme);
+    localStorage.setItem('routeops_theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {
