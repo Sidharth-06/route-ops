@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import confetti from 'canvas-confetti';
 import {
   Coordinate,
   DeliveryStop,
@@ -65,16 +64,6 @@ export function useTruckSimulation() {
             // Final destination reached!
             setIsPlaying(false);
             if (soundEnabled) playUiFeedbackSound('complete');
-            try {
-              confetti({
-                particleCount: 120,
-                spread: 70,
-                origin: { y: 0.6 },
-                colors: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6'],
-              });
-            } catch {
-              // Graceful fallback
-            }
           } else {
             // D1 or D2 intermediate stop dwell simulation (3 seconds cargo unload)
             if (soundEnabled) playUiFeedbackSound('arrival');
